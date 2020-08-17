@@ -82,7 +82,10 @@ def ramp_window(smp,ramp_size):
 
 #keep envelope modes: 0 - don't keep envelope, 1 - don't keep envelope but align the sound, 2 - keep envelope
 def process_audiofile(input_filename,output_filename,options,keep_envelope_mode):
-    tmpdir=tempfile.mkdtemp("2xautoconvolution")
+    if options.temp_dir != "":
+        tmpdir = options.temp_dir
+    else:
+        tmpdir=tempfile.mkdtemp("2xautoconvolution")
     print "Using temporary directory:", tmpdir
    
     cmdline=["avconv", "-y", "-v","quiet", "-i",input_filename]
@@ -285,6 +288,7 @@ parser.add_option("-K", "--both-keep-envelope-modes", dest="both_keep_envelope_m
 parser.add_option("-b", "--blocksize_seconds", dest="blocksize_seconds",help="blocksize (seconds)",type="float",default=60.0)
 parser.add_option("-l", "--limit_blocks", dest="limit_blocks",help="limit to adjacent L blocks in order to avoid mixing too distant parts of the audio file (default 0 = unlimited)",type="int",default=0)
 parser.add_option("-r", "--sample_rate", dest="sample_rate",help="convert to sample_rate",type="int",default=0)
+parser.add_option("-d", "--temp-dir", dest="temp_dir", help="directory for temporary files",type="string", default="")
 (options, args) = parser.parse_args()
 
 if len(args)!=1 or len(options.output)==0:
