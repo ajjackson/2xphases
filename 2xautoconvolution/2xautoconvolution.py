@@ -92,7 +92,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         tmpdir=tempfile.mkdtemp("2xautoconvolution")
     print("Using temporary directory: {}".format(tmpdir))
    
-    cmdline=["avconv", "-y", "-v","quiet", "-i",input_filename]
+    cmdline=["ffmpeg", "-y", "-v","quiet", "-i",input_filename]
     if options.sample_rate>0:
         cmdline+=["-ar",str(options.sample_rate)]
     tmp_wav_filename=os.path.join(tmpdir,"tmp_input.wav")
