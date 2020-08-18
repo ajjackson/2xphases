@@ -77,7 +77,7 @@ def get_block_mixes(n_blocks):
             if val not in pos[i+j]:
                 pos[i+j][val]=0
             pos[i+j][val]+=1
-    result=[v for k,v in pos.iteritems()]
+    result=[v for k,v in pos.items()]
     return result
 
 def ramp_window(smp,ramp_size):
@@ -210,7 +210,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         multichannel_smps=[]
         for nchannel in range(nchannels): 
             sum_freqs=np.zeros(output_block_size_samples//2+1,dtype=np.complex64)
-            for ((b1_k,b2_k),mul) in block_mix.iteritems():
+            for ((b1_k,b2_k),mul) in block_mix.items():
                 if options.limit_blocks>0:
                     if abs(b1_k-b2_k)>options.limit_blocks: 
                         continue
