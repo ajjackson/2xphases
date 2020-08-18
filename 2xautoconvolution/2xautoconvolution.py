@@ -15,6 +15,8 @@
 
 # this file is released under Public Domain
 
+from __future__ import absolute_import, division, print_function
+
 import sys
 import gc
 import warnings
@@ -58,9 +60,9 @@ def optimize_fft_size(n):
     while True:
         n=orig_n
         while (n%2)==0:
-            n/=2
+            n//=2
         while (n%3)==0:
-            n/=3
+            n//=3
         if n<2:
             break
         orig_n+=1
@@ -128,7 +130,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
 
     nchannels=0
 
-    fft_size=output_block_size_samples/2+1
+    fft_size=output_block_size_samples//2+1
 
     #read 16 bit wave files
     with contextlib.closing(wave.open(tmp_wav_filename,'rb')) as f:
@@ -207,7 +209,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         sys.stdout.flush()
         multichannel_smps=[]
         for nchannel in range(nchannels): 
-            sum_freqs=np.zeros(output_block_size_samples/2+1,dtype=np.complex64)
+            sum_freqs=np.zeros(output_block_size_samples//2+1,dtype=np.complex64)
             for ((b1_k,b2_k),mul) in block_mix.iteritems():
                 if options.limit_blocks>0:
                     if abs(b1_k-b2_k)>options.limit_blocks: 
@@ -221,7 +223,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
             smp=np.float32(np.fft.irfft(sum_freqs))
             cleanup_memory()
             if extra_output_samples>0:
-                extra=extra_output_samples/2
+                extra=extra_output_samples//2
                 smp=np.roll(smp,extra)
                 ramp_window(smp,extra)
                 #debug_write_wav(os.path.join("tmp/out_%d_%04d.wav" % (nchannel,k)),sample_rate,smp) 
@@ -318,7 +320,3 @@ else:
     print("Output file: " + options.output)
     process_audiofile(input_filename,options.output,options,2 if options.keep_envelope else 0)
 print()
-
-
-
-
