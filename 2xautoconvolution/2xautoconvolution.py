@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 #
 # Autoconvolution for long audio files
 #
@@ -10,6 +10,8 @@
 #
 # by Nasca Octavian PAUL, Targu Mures, Romania
 # http://www.paulnasca.com/
+#
+# With some modifications by amyfurniss and ajjackson
 
 # this file is released under Public Domain
 
@@ -86,7 +88,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         tmpdir = options.temp_dir
     else:
         tmpdir=tempfile.mkdtemp("2xautoconvolution")
-    print "Using temporary directory:", tmpdir
+    print("Using temporary directory: {}".format(tmpdir))
    
     cmdline=["avconv", "-y", "-v","quiet", "-i",input_filename]
     if options.sample_rate>0:
@@ -100,14 +102,14 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
     with contextlib.closing(wave.open(tmp_wav_filename,'rb')) as f:
         sample_rate=f.getframerate()
     input_block_size_samples=int(optimize_fft_size(options.blocksize_seconds*sample_rate))
-    print "Input block size (samples):",input_block_size_samples
+    print("Input block size (samples): {}".format(input_block_size_samples))
     input_ramp_size=0
     if keep_envelope_mode==0:
         output_block_size_samples=input_block_size_samples*2
     if keep_envelope_mode==1:
         output_block_size_samples=input_block_size_samples*3
     if keep_envelope_mode==2:
-        print "Spectrum envelope preservation: enabled"
+        print("Spectrum envelope preservation: enabled")
         envelopes=[]
         output_block_size_samples=input_block_size_samples*3
         if options.limit_blocks>0:
@@ -116,7 +118,11 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
 
 
     if options.limit_blocks>0:
-        print "Limiting to %d adjacent blocks; resulted spread size is %.1f seconds" % (options.limit_blocks,options.limit_blocks*float(input_block_size_samples)/sample_rate)
+        print("Limiting to {blocks:d} adjacent blocks; "
+              "resulted spread size is {spread:.1f} seconds".format(
+                  blocks=options.limit_blocks,
+                  spread=(options.limit_blocks
+                          * float(input_block_size_samples)/sample_rate)))
     
     extra_output_samples=output_block_size_samples-input_block_size_samples*2
 
@@ -138,7 +144,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
 
         #force adding extra zero block to flush out all the samples
         n_blocks+=1
-        print "Using %d blocks" % n_blocks
+        print("Using %d blocks" % n_blocks)
 
         #compute DC noise removal (removal of anything below 20Hz)
         b20hz, a20hz = signal.butter(3,20.0/(float(sample_rate)/2.0),btype="highpass")
@@ -150,7 +156,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
 
         #analyse audio and make frequency blocks
         for block_k in range(n_blocks):
-            print "Doing FFT for block %d/%d  \r" % (block_k+1,n_blocks),
+            print("Doing FFT for block %d/%d  \r" % (block_k+1, n_blocks))
             sys.stdout.flush()
             inbuf=f.readframes(input_block_size_samples)
             freq_block=[]
@@ -179,12 +185,11 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
             del inbuf
         cleanup_memory()
 
-    print
-        
+    print()        
     
     #smooth envelopes
     if envelopes is not None:
-        print "Smoothing envelopes"
+        print("Smoothing envelopes")
         for nchannel in range(nchannels):
             one_hz_size_output=2.0*float(fft_size)/float(sample_rate)
             envelopes[nchannel]=ndimage.filters.maximum_filter1d(envelopes[nchannel],size=max(int(one_hz_size_output+0.5),2))+1e-9
@@ -197,7 +202,8 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         size_shown=len(block_mix)
         if options.limit_blocks>0:
             size_shown=min(size_shown,options.limit_blocks)
-        print "Mixing blocks %d/%d (size %d)       \r" % (k+1,len(block_mixes),size_shown),
+        print("Mixing blocks %d/%d (size %d)       \r"
+              % (k+1,len(block_mixes),size_shown))
         sys.stdout.flush()
         multichannel_smps=[]
         for nchannel in range(nchannels): 
@@ -231,8 +237,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         del multichannel_smps
         cleanup_memory()
 
-    print
-    print "Combining blocks"
+    print("\rCombining blocks")
     #get the output chunks, normalize them and combine to one wav file
     with contextlib.closing(wave.open(output_filename,'wb')) as f:
         f.setnchannels(nchannels)
@@ -241,7 +246,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         
         old_buf=[]
         for k in range(len(block_mixes)):
-            print "Output block %d/%d \r" % (k+1,len(block_mixes)),
+            print("Output block %d/%d \r" % (k+1,len(block_mixes)))
             sys.stdout.flush()
             current_smps=np.float32(np.load(get_tmpsmp_filename(tmpdir,k))*(0.7/max_smp))
             current_buf=current_smps[:input_block_size_samples]
@@ -262,7 +267,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
             del output_buf
             cleanup_memory()
 
-    print
+    print()
 
     #cleanup
     cleanup_size=0
@@ -276,8 +281,8 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
     except OSError:
         pass
 
-    print "%.3f GB was temporary used." % (cleanup_size/1e9)
-    print "Output was written in:",output_filename
+    print("%.3f GB was temporary used." % (cleanup_size/1e9))
+    print("Output was written in: {}".format(output_filename))
 
 
 
@@ -292,27 +297,27 @@ parser.add_option("-d", "--temp-dir", dest="temp_dir", help="directory for tempo
 (options, args) = parser.parse_args()
 
 if len(args)!=1 or len(options.output)==0:
-    print "Error in command line parameters. Run this program with --help for help."
+    print("Error in command line parameters. Run this program with --help for help.")
     sys.exit(1)
 
 input_filename=args[0]
-print "Input file: "+input_filename
+print("Input file: " + input_filename)
 if not os.path.isfile(input_filename):
-    print "Error: Could not open input file:",input_filename
+    print("Error: Could not open input file: {}".format(input_filename))
     sys.exit(1)
 
 if options.both_keep_envelope_modes:
     (output_base,output_ext)=os.path.splitext(options.output)
-    print "Making two output files (with/without envelope keeping)"
+    print("Making two output files (with/without envelope keeping)")
     for keep_mode in [1,2]:
         output_file=output_base+"_k"+str(keep_mode)+output_ext
-        print "Output file: "+output_file
-        process_audiofile(input_filename,output_file,options,keep_mode)        
+        print("Output file: " + output_file)
+        process_audiofile(input_filename, output_file, options, keep_mode)
 
 else:
-    print "Output file: "+options.output
+    print("Output file: " + options.output)
     process_audiofile(input_filename,options.output,options,2 if options.keep_envelope else 0)
-print
+print()
 
 
 
