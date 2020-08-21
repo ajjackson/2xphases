@@ -120,7 +120,7 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
         raise OSError("Could not find a program for file format / sample-rate "
                       "conversion. Please install ffmpeg or avconv.")
    
-    cmdline=["ffmpeg", "-y", "-v","quiet", "-i",input_filename]
+    cmdline=[conversion_bin, "-y", "-v","quiet", "-i",input_filename]
     if options.sample_rate>0:
         cmdline+=["-ar",str(options.sample_rate)]
     tmp_wav_filename=os.path.join(tmpdir,"tmp_input.wav")
