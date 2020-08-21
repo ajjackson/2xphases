@@ -36,7 +36,7 @@ import scipy.io.wavfile #for debugging
 
 import numpy as np
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 from tempfile import TemporaryFile
 
 tmpextension=".npy"
@@ -297,42 +297,52 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
 
 
 def get_parser():
-    parser = OptionParser(usage="usage: %prog [options] -o output.wav input.wav")
-    parser.add_option("-o", "--output", dest="output",help="output WAV file",type="string",default="")
-    parser.add_option("-k", "--keep-envelope", dest="keep_envelope", action="store_true",help="try to preserve the overall amplitude envelope",default=False)
-    parser.add_option("-K", "--both-keep-envelope-modes", dest="both_keep_envelope_modes", action="store_true",help="output two files: one without keeping envelope and the other without keeping envelope",default=False)
-    parser.add_option("-b", "--blocksize_seconds", dest="blocksize_seconds",help="blocksize (seconds)",type="float",default=60.0)
-    parser.add_option("-l", "--limit_blocks", dest="limit_blocks",help="limit to adjacent L blocks in order to avoid mixing too distant parts of the audio file (default 0 = unlimited)",type="int",default=0)
-    parser.add_option("-r", "--sample_rate", dest="sample_rate",help="convert to sample_rate",type="int",default=0)
-    parser.add_option("-d", "--temp-dir", dest="temp_dir", help="directory for temporary files",type="string", default="")
+    parser = ArgumentParser()
+    parser.add_argument("input", type=str, help="Input audio file")
+    parser.add_argument("-o", "--output", type=str, default="",
+                        help="output WAV file")
+    parser.add_argument("-k", "--keep-envelope", dest="keep_envelope",
+                        action="store_true",
+                        help="try to preserve the overall amplitude envelope")
+    parser.add_argument("-K", "--both-keep-envelope-modes",
+                        dest="both_keep_envelope_modes", action="store_true",
+                        help="output two files: one without keeping envelope "
+                             "and the other without keeping envelope")
+    parser.add_argument("-b", "--blocksize_seconds", type=float, default=60.0,
+                        help="blocksize (seconds)")
+    parser.add_argument("-l", "--limit_blocks", type=int, default=0,
+                        help="limit to adjacent L blocks in order to avoid "
+                             "mixing too distant parts of the audio file "
+                             "(default 0 = unlimited)")
+    parser.add_argument("-r", "--sample_rate", type=int, default=0,
+                        help="convert to sample_rate")
+    parser.add_argument("-d", "--temp-dir", dest="temp_dir", type=str,
+                        default="",
+                        help="directory for temporary files")
     return parser
 
 
 def main():
     parser = get_parser()
-    (options, args) = parser.parse_args()
+    args = parser.parse_args()
 
-    if len(args)!=1 or len(options.output)==0:
-        print("Error in command line parameters. Run this program with --help for help.")
-        sys.exit(1)
-
-    input_filename=args[0]
+    input_filename=args.input
     print("Input file: " + input_filename)
     if not os.path.isfile(input_filename):
         print("Error: Could not open input file: {}".format(input_filename))
         sys.exit(1)
 
-    if options.both_keep_envelope_modes:
-        (output_base,output_ext)=os.path.splitext(options.output)
+    if args.both_keep_envelope_modes:
+        (output_base,output_ext)=os.path.splitext(args.output)
         print("Making two output files (with/without envelope keeping)")
         for keep_mode in [1,2]:
             output_file=output_base+"_k"+str(keep_mode)+output_ext
             print("Output file: " + output_file)
-            process_audiofile(input_filename, output_file, options, keep_mode)
+            process_audiofile(input_filename, output_file, args, keep_mode)
 
     else:
-        print("Output file: " + options.output)
-        process_audiofile(input_filename,options.output,options,2 if options.keep_envelope else 0)
+        print("Output file: " + args.output)
+        process_audiofile(input_filename,args.output,args,2 if args.keep_envelope else 0)
     print()
 
 if __name__ == '__main__':
