@@ -17,27 +17,24 @@
 
 from __future__ import absolute_import, division, print_function
 
-import sys
-import gc
-import warnings
+from argparse import ArgumentParser
+from collections import defaultdict
 import contextlib
-import struct
+import gc
+import glob
 import os
 import os.path
 import shutil
+import struct
 import subprocess
+import sys
 import tempfile
-import glob
-from collections import defaultdict
-
-from scipy import signal,ndimage
+import warnings
 import wave
-import scipy.io.wavfile #for debugging
 
 import numpy as np
-
-from argparse import ArgumentParser
-from tempfile import TemporaryFile
+from scipy import signal,ndimage
+import scipy.io.wavfile #for debugging
 
 tmpextension=".npy"
 
