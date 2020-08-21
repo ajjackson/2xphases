@@ -3,7 +3,7 @@
 # Autoconvolution for long audio files
 #
 # The autoconvolution can produce very interesting effects on audio (especially if the overall spectrum envelope is preserved)
-# For loading non-wav files (like mp3, ogg, etc) or changing the sample_rate it requires "avconv"
+# For loading non-wav files (like mp3, ogg, etc) or changing the sample_rate it requires "avconv" or "ffmpeg"
 # This software requires a lot of temporary hard drive space for processing 
 #
 # You can try this for a whole melody to get interesting effect.
@@ -24,6 +24,7 @@ import contextlib
 import struct
 import os
 import os.path
+import shutil
 import subprocess
 import tempfile
 import glob
@@ -91,6 +92,14 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
     else:
         tmpdir=tempfile.mkdtemp("2xautoconvolution")
     print("Using temporary directory: {}".format(tmpdir))
+
+    supported_conversion_programs = ('ffmpeg', 'avconv')
+    for conversion_bin in supported_conversion_programs:
+        if shutil.which(conversion_bin):
+            break
+    else:
+        raise OSError("Could not find a program for file format / sample-rate "
+                      "conversion. Please install ffmpeg or avconv.")
    
     cmdline=["ffmpeg", "-y", "-v","quiet", "-i",input_filename]
     if options.sample_rate>0:
@@ -287,36 +296,44 @@ def process_audiofile(input_filename,output_filename,options,keep_envelope_mode)
     print("Output was written in: {}".format(output_filename))
 
 
+def get_parser():
+    parser = OptionParser(usage="usage: %prog [options] -o output.wav input.wav")
+    parser.add_option("-o", "--output", dest="output",help="output WAV file",type="string",default="")
+    parser.add_option("-k", "--keep-envelope", dest="keep_envelope", action="store_true",help="try to preserve the overall amplitude envelope",default=False)
+    parser.add_option("-K", "--both-keep-envelope-modes", dest="both_keep_envelope_modes", action="store_true",help="output two files: one without keeping envelope and the other without keeping envelope",default=False)
+    parser.add_option("-b", "--blocksize_seconds", dest="blocksize_seconds",help="blocksize (seconds)",type="float",default=60.0)
+    parser.add_option("-l", "--limit_blocks", dest="limit_blocks",help="limit to adjacent L blocks in order to avoid mixing too distant parts of the audio file (default 0 = unlimited)",type="int",default=0)
+    parser.add_option("-r", "--sample_rate", dest="sample_rate",help="convert to sample_rate",type="int",default=0)
+    parser.add_option("-d", "--temp-dir", dest="temp_dir", help="directory for temporary files",type="string", default="")
+    return parser
 
-parser = OptionParser(usage="usage: %prog [options] -o output.wav input.wav")
-parser.add_option("-o", "--output", dest="output",help="output WAV file",type="string",default="")
-parser.add_option("-k", "--keep-envelope", dest="keep_envelope", action="store_true",help="try to preserve the overall amplitude envelope",default=False)
-parser.add_option("-K", "--both-keep-envelope-modes", dest="both_keep_envelope_modes", action="store_true",help="output two files: one without keeping envelope and the other without keeping envelope",default=False)
-parser.add_option("-b", "--blocksize_seconds", dest="blocksize_seconds",help="blocksize (seconds)",type="float",default=60.0)
-parser.add_option("-l", "--limit_blocks", dest="limit_blocks",help="limit to adjacent L blocks in order to avoid mixing too distant parts of the audio file (default 0 = unlimited)",type="int",default=0)
-parser.add_option("-r", "--sample_rate", dest="sample_rate",help="convert to sample_rate",type="int",default=0)
-parser.add_option("-d", "--temp-dir", dest="temp_dir", help="directory for temporary files",type="string", default="")
-(options, args) = parser.parse_args()
 
-if len(args)!=1 or len(options.output)==0:
-    print("Error in command line parameters. Run this program with --help for help.")
-    sys.exit(1)
+def main():
+    parser = get_parser()
+    (options, args) = parser.parse_args()
 
-input_filename=args[0]
-print("Input file: " + input_filename)
-if not os.path.isfile(input_filename):
-    print("Error: Could not open input file: {}".format(input_filename))
-    sys.exit(1)
+    if len(args)!=1 or len(options.output)==0:
+        print("Error in command line parameters. Run this program with --help for help.")
+        sys.exit(1)
 
-if options.both_keep_envelope_modes:
-    (output_base,output_ext)=os.path.splitext(options.output)
-    print("Making two output files (with/without envelope keeping)")
-    for keep_mode in [1,2]:
-        output_file=output_base+"_k"+str(keep_mode)+output_ext
-        print("Output file: " + output_file)
-        process_audiofile(input_filename, output_file, options, keep_mode)
+    input_filename=args[0]
+    print("Input file: " + input_filename)
+    if not os.path.isfile(input_filename):
+        print("Error: Could not open input file: {}".format(input_filename))
+        sys.exit(1)
 
-else:
-    print("Output file: " + options.output)
-    process_audiofile(input_filename,options.output,options,2 if options.keep_envelope else 0)
-print()
+    if options.both_keep_envelope_modes:
+        (output_base,output_ext)=os.path.splitext(options.output)
+        print("Making two output files (with/without envelope keeping)")
+        for keep_mode in [1,2]:
+            output_file=output_base+"_k"+str(keep_mode)+output_ext
+            print("Output file: " + output_file)
+            process_audiofile(input_filename, output_file, options, keep_mode)
+
+    else:
+        print("Output file: " + options.output)
+        process_audiofile(input_filename,options.output,options,2 if options.keep_envelope else 0)
+    print()
+
+if __name__ == '__main__':
+    main()
